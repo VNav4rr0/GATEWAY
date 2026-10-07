@@ -1,20 +1,38 @@
-# 🚀 API Gateway - Microservices Orchestra
+# Gateway
 
-Este é o ponto de entrada único (Entry Point) do ecossistema. Ele gerencia o roteamento dinâmico para todos os microsserviços e aplica a segurança perimetral.
+Entrada unica do AgendaFlow. Valida o JWT (header Authorization ou cookie), aplica as regras de role e repassa a identidade aos servicos.
 
-## 🛠️ Tecnologias
-- Java 17 / Spring Boot 3.2.5
-- Spring Cloud Gateway
-- Spring Security (WebFlux)
-- JWT (JSON Web Token)
+## Rotas
 
-## ⚙️ Funcionalidades
-- **Roteamento:** Encaminha requisições para os serviços de Login, Clientes e Produtos.
-- **Segurança:** Valida tokens JWT antes de permitir o acesso às APIs internas.
-- **CORS:** Configuração centralizada de acesso.
+| Caminho | Servico | Porta |
+|---|---|---|
+| `/api/auth/**` | Login | 8090 |
+| `/api/servicos/*/horarios`, `/api/calendario/**` | Calendario | 8092 |
+| `/api/servicos/**`, `/api/agendamentos/**` | Agendamento | 8091 |
+| `/api/relatorio/**` | Relatorio | 8093 |
 
-## 📌 Configuração de Rotas (application.yaml)
-- `/api/login/**` e `/api/usuario/**` -> Login Service (8081)
-- `/api/cliente/**` -> Cliente Service (8082)
-- `/api/produto/**` -> Produto Service (8083)
-- `/api/pedido/**` -> Pedido/Venda Service (8083)
+A rota de horarios vem antes da de servicos de proposito. `/interno/**` nao tem rota.
+
+## Acesso
+
+- Liberado: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` e `OPTIONS`.
+- Somente ADMIN: `/api/relatorio/**`, `/api/calendario/**` e escrita em `/api/servicos/**`.
+- Demais rotas: qualquer usuario autenticado.
+
+## Cookie
+
+O Login cria o cookie `tokenAgendaFlow` (HttpOnly, SameSite=Lax). O `CookieBearerTokenConverter` procura primeiro o header `Authorization: Bearer` e, na falta dele, o cookie. Em producao com HTTPS o cookie deve passar a ser `Secure`.
+
+## Identidade para os servicos
+
+O `UsuarioHeadersFilter` apaga `X-Usuario-Id` e `X-Usuario-Role` vindos do cliente e, com JWT valido, grava os valores das claims `uid` e `roles`.
+
+## CSRF
+
+Desabilitado porque o cookie e SameSite=Lax, as chamadas sao JSON e o CORS so aceita as origens listadas.
+
+## Como rodar
+
+1. `docker compose up -d mongo`
+2. Defina `JWT_SECRET` (igual ao do Login). Sem ele o Gateway nao sobe.
+3. `./mvnw spring-boot:run`

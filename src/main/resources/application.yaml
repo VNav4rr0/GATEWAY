@@ -2,48 +2,61 @@ server:
   port: 8080
 
 spring:
-  cors:
-    url:
-      - "http://localhost:8081"
-      - "http://localhost:8082"
-      - "http://localhost:8084"
-      - "http://localhost:19006"
-      - "http://localhost:3000"
-      - "http://localhost:5173"
-      - "http://127.0.0.1:8081"
-      - "http://127.0.0.1:8084"
-      - "http://127.0.0.1:5500"
   application:
     name: api-gateway
+  config:
+    import: "optional:file:.env[.properties]"
   cloud:
     gateway:
-      httpclient:
-        connect-timeout: 5000
-        response-timeout: 10s
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
+          routes:
+            - id: loginApi
+              uri: lb://login-service
+              predicates:
+                - Path=/api/auth/**
 
-      routes:
-        - id: login-api
-          uri: lb://login-service
-          predicates:
-            - Path=/api/login, /api/login/**, /api/usuario, /api/usuario/**
+            - id: calendarioApi
+              uri: lb://calendario-service
+              predicates:
+                - Path=/api/servicos/*/horarios, /api/calendario/**
 
-        - id: cliente-api
-          uri: lb://cliente-service
-          predicates:
-            - Path=/api/cliente/**
+            - id: agendamentoApi
+              uri: lb://agendamento-service
+              predicates:
+                - Path=/api/servicos/**, /api/agendamentos/**
 
-        - id: produto-pedidos-api
-          uri: lb://produto-service
-          predicates:
-            - Path=/api/produto/**, /api/pedido/**
-
+            - id: relatorioApi
+              uri: lb://relatorio-service
+              predicates:
+                - Path=/api/relatorio/**
     discovery:
       client:
         simple:
           instances:
             login-service:
-              - uri: ${LOGIN_URL:http://localhost:8081}
-            cliente-service:
-              - uri: ${CLIENTE_URL:http://localhost:8082}
-            produto-service:
-              - uri: ${PRODUTO_URL:http://localhost:8083}
+              - uri: ${LOGIN_URL:http://localhost:8090}
+            agendamento-service:
+              - uri: ${AGENDAMENTO_URL:http://localhost:8091}
+            calendario-service:
+              - uri: ${CALENDARIO_URL:http://localhost:8092}
+            relatorio-service:
+              - uri: ${RELATORIO_URL:http://localhost:8093}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+cookie:
+  nome: ${COOKIE_NOME:tokenAgendaFlow}
+
+cors:
+  origens:
+    - "http://localhost:8081"
+    - "http://localhost:19006"
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://127.0.0.1:8081"
+    - "http://127.0.0.1:5500"
